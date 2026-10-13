@@ -77,7 +77,8 @@ date: 2026-01-01
 A short note on how this source was used or what it inspired.
 ```
 
-- `title` and `type` are required. `type` must be one of `paper`, `video`, `project`, `article`, or `other` — this determines which section on the `/references` page it appears in.
+- `title` and `type` are required. `type` must be one of `paper`, `video`, `project`, `article`, or `other`.
+- Cite it anywhere with `<Cite id="file-name-without-extension" />`. References are numbered IEEE-style, in order of first citation (home page first, then log entries oldest to newest); uncited references are listed last.
 - `url`, `author`, and `date` are optional.
 - The markdown body is the credit/insight note shown under the citation.
 - For a YouTube/Vimeo reference, set `type: "video"` and link it via `url` — or use a `.mdx` file with the `<Video />` component (see [Adding video](#adding-video)) to embed it inline.
