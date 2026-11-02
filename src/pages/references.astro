@@ -1,15 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { render } from 'astro:content';
-import { getSortedReferences, typeOrder } from '../lib/references';
-
-const typeLabels: Record<string, string> = {
-  video: 'Video',
-  paper: 'Paper',
-  project: 'Open Source Project',
-  article: 'Article',
-  other: 'Other',
-};
+import { getSortedReferences } from '../lib/references';
 
 const sorted = await getSortedReferences();
 const numbers = new Map(sorted.map((entry, i) => [entry.id, i + 1]));
@@ -17,13 +9,6 @@ const numbers = new Map(sorted.map((entry, i) => [entry.id, i + 1]));
 const entriesWithContent = await Promise.all(
   sorted.map(async (entry) => ({ entry, Content: (await render(entry)).Content }))
 );
-
-const grouped = new Map<string, typeof entriesWithContent>();
-for (const item of entriesWithContent) {
-  const key = item.entry.data.type;
-  if (!grouped.has(key)) grouped.set(key, []);
-  grouped.get(key)!.push(item);
-}
 ---
 
 <Base
@@ -40,17 +25,8 @@ for (const item of entriesWithContent) {
     <p class="mt-8 text-slate-500 dark:text-slate-400">No references added yet.</p>
   )}
 
-  <div class="mt-10 space-y-12">
-    {typeOrder
-      .filter((type) => grouped.has(type))
-      .map((type) => (
-        <section>
-          <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white">
-            <span class="inline-block h-4 w-1.5 rounded-full" style="background-image: linear-gradient(180deg, #f8fafc, #94a3b8, #475569, #cbd5e1);"></span>
-            {typeLabels[type]}
-          </h2>
-          <ul class="mt-4 space-y-6">
-            {grouped.get(type)!.map(({ entry, Content }) => {
+  <ul class="mt-10 space-y-6">
+            {entriesWithContent.map(({ entry, Content }) => {
               const { title, url, author, date } = entry.data;
               return (
                 <li id={entry.id} class="y2k-card scroll-mt-6 overflow-hidden rounded-xl target:ring-2 target:ring-teal-500 border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
@@ -92,8 +68,5 @@ for (const item of entriesWithContent) {
                 </li>
               );
             })}
-          </ul>
-        </section>
-      ))}
-  </div>
+  </ul>
 </Base>

@@ -17,7 +17,7 @@ const base = import.meta.env.BASE_URL;
       HOM-E
     </h1>
     <h2 class="mt-2 font-mono text-sm font-semibold uppercase tracking-[0.18em] text-teal-600 sm:text-base dark:text-teal-400">
-      Habitats On Mars (by) Excavation
+      Bimanual Manipulation on Independent Mobile Bases
     </h2>
     <p class="mt-4 max-w-2xl text-base text-slate-600 sm:text-lg dark:text-slate-400">
       A running record of decisions, iterations, and lessons learned while
@@ -40,21 +40,20 @@ const base = import.meta.env.BASE_URL;
       <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Project Proposal</h2>
       <div class="prose-log mt-3">
         <p>
-          Humanity is actively working towards establishing a sustained presence on Mars; however, 
-          the Martian surface is extraordinarily hostile to human life, due to unshielded cosmic 
-          radiation, frequent severe dust storms, and extreme temperature swings. Martian lava tubes 
-          offer ideal shielding for future habitats, but they must be mapped, cleared of debris, and 
-          structurally assessed before use <Cite id="lava-tubes-paper" />. Currently, this process is hazardous for astronauts in 
-          bulky suits due to the dark, uneven, and GPS-denied environment. Existing robotic solutions
-          focus solely on reconnaissance, leaving a critical gap in physical preparation and debris 
-          clearance.
+          Today's two-handed robots mount both arms on one torso <Cite id="mobile-aloha" />, which fixes
+          the distance between them. They cannot handle objects much longer than their arm span, be on
+          both sides of a door or table at once, or split up to do two small jobs in parallel.
         </p>
         <p>
-          A decentralized robotic swarm is the perfect solution to this problem. Using multiple robots 
-          leverages parallelization, allowing simultaneous exploration to increase efficiency. This 
-          distributed approach also provides critical fault tolerance, individual units failing does 
-          not prevent completion of the mission. Finally, clearing debris requires collaboration, as 
-          large blocks are too heavy for a single unit to transport.
+          Putting each arm on its own mobile base removes those limits, but the arms no longer know
+          exactly where each other are. The robots must work that out with their own sensors and
+          coordinate without a rigid link <Cite id="khatib-1996" /><Cite id="body-extension" /><Cite id="chorus" />.
+        </p>
+        <p>
+          This project explores a pair of <strong>identical single-arm mobile robots</strong> that work
+          alone on simple tasks and team up when a task needs both. We will build the robots on a
+          budget, coordinate them using only onboard sensing, and measure what free bases gain over a
+          fixed-spacing arrangement of the same arms.
         </p>
       </div>
     </div>
