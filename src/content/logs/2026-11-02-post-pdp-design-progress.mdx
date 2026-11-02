@@ -2,8 +2,10 @@
 title: "Post-PDP Design Progress"
 date: 2026-11-02
 summary: "Two weeks of turning the preliminary design into a buildable robot after the PDP."
-tags: ["design", "electrical", "planning"]
+tags: ["design", "electrical", "planning", "software", "simulation"]
 ---
+
+import Video from '../../components/Video.astro';
 
 ## Overview
 
@@ -55,8 +57,36 @@ Putting the actuators behind the relay means either the E-stop or the ESP32 can 
 - **Raspberry Pi 5 (high level):** the servo control board and RGB-D camera over USB 3.0, the SLAMTEC LiDAR over UART, and the eight ToF sensors on I2C, with their LPn lines on GPIO to give each one its own address
 - **ESP32-S3 (low level):** connected to the Pi over USB-C, it drives both motor driver boards with PWM and direction signals and reads the IMU over I2C
 
+#### Karthigan
+
+##### Software Architecture & DAG Execution
+
+**Expanded the software architecture proposal.** Built on the preliminary research with a proposal connecting a shared task planner and execution layer to distributed robot coordination and local feedback control. Defined how reusable skills should describe participants, prerequisites, completion conditions and conditions that must remain true during execution, such as maintaining a grasp while carrying. Also investigated grasp/contact selection, load sharing, reachability, collision checks and uncertainty, and outlined interfaces and recovery paths for integrating these components.
+
+**Built an executable co-carry DAG prototype.** Added a task-graph runner on top of the existing two-robot MuJoCo simulator. A strict JSON schema describes the actions, assigned robots, parameters, dependencies and timeouts. The executor starts actions when their predecessors have succeeded and their robots are available, allowing independent actions to run concurrently while joint actions reserve both robots.
+
+Co-carry is composed from six separately executable primitives: **approach, grasp, lift, transport, lower and release**. Completion is checked against simulated motion, contact and support rather than advancing through a single fixed timeline. Holding state persists between nodes, and detected failures or timeouts stop the simulation episode and block pending actions.
+
+**Made grasp locations explicit.** Approach and grasp both require a named `grasp_site`: `end_a` or `end_b`. These sites are attached to the payload's coordinate frame, so their positions and orientations follow the object. The example plans assign r0 to `end_a` and r1 to `end_b`; a grasp requesting a different site from its completed approach is rejected. The selected site and grasp orientation are retained through the subsequent phases and withdrawal.
+
+**Tested different graph structures in the simulator.** All three co-carry plans completed the lift, transport, placement and release task using simulated finger contact. The dependency changes alter execution without changing the primitive implementations:
+
+| DAG structure | Execution pattern | Simulated completion time |
+| :--- | :--- | ---: |
+| Parallel | Each robot grasps as soon as its own approach finishes | 18.728 s |
+| Staged | Both approaches finish before either grasp starts | 18.728 s |
+| Serial | r0 grasps before r1 begins its approach | 23.008 s |
+
+The **35 automated tests** cover schema validation, dependency scheduling, robot ownership, failure handling and grasp-site behavior, including transformed objects, mismatched sites and stale approach positions. Each run also produces node-level events, state observations and a result report for comparing DAG experiments.
+
+<Video src="videos/2026-11-02-dag-cocarry.mp4" caption="The staged co-carry DAG executing in MuJoCo: approach, grasp, joint lift, transport, lower and release. The run completes in 18.728 simulated seconds." />
+
+The current prototype uses MuJoCo ground-truth feedback and scripted coordinated motion. The proposed perception, grasp-planning and cooperative-control components remain integration work for subsequent iterations.
+
 ## Next steps
 
 - Lock in the RGB-D wrist camera and add it to the BOM
 - Follow up with sponsors on the pitch
 - Check the power budget against the servo and wheel stall currents, then order parts
+- Extend the primitive contracts to the handover and tape hold-and-act demos
+- Connect DAG execution status and failure feedback to the proposed planning and control interfaces

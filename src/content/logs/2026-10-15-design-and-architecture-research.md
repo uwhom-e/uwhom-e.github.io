@@ -1,8 +1,8 @@
 ---
 title: "Design & Architecture Research"
 date: 2026-10-15
-summary: "Parameter sweeps and decision matrices to settle the robot's mechanical design and system architecture."
-tags: ["design", "research"]
+summary: "Mechanical trade studies and preliminary software architecture research for independent mobile manipulators."
+tags: ["design", "research", "software"]
 ---
 
 ## Overview
@@ -53,3 +53,11 @@ For the links (40 × 40 × 2.5 mm printed box), both carbon-fibre materials clea
 | **4-wheel X, r 0.20 m** | 1.0 kg | 8.7 kg | **5.00** |
 
 The resulting build carries 0.46 kg while moving (against a 0.3 kg minimum) at 0.3 m/s loaded tip speed, for $168 in servos per robot.
+
+#### Karthigan
+
+##### Software Research & Preliminary Architecture
+
+**Narrowed the software research scope with Tong and Ethan.** Karthigan, Tong and Ethan focused the software investigation on how independent mobile manipulators could plan, coordinate and execute cooperative tasks. The discussions organized the research around task decomposition, reusable manipulation skills, execution feedback and coordination between the robots, giving the team a more focused set of architecture questions to investigate.
+
+**Formulated preliminary architecture documents.** Outlined general approaches for connecting high-level planning, perception, task execution and local robot control. The early documents compared possible planning and coordination structures, described how the major components could exchange task and state information, and recorded open questions for further research. These preliminary directions provided a basis for the later architecture proposals and task-graph experiments.
