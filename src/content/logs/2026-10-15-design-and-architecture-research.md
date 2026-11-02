@@ -1,7 +1,7 @@
 ---
 title: "Design & Architecture Research"
 date: 2026-10-15
-summary: "Mechanical trade studies and preliminary software architecture research for independent mobile manipulators."
+summary: "Exploring mechanical design choices and how the robots could plan and work together."
 tags: ["design", "research", "software"]
 ---
 
@@ -56,8 +56,8 @@ The resulting build carries 0.46 kg while moving (against a 0.3 kg minimum) at 0
 
 #### Karthigan
 
-##### Software Research & Preliminary Architecture
+##### Software Research & Early Planning
 
-**Narrowed the software research scope with Tong and Ethan.** Karthigan, Tong and Ethan focused the software investigation on how independent mobile manipulators could plan, coordinate and execute cooperative tasks. The discussions organized the research around task decomposition, reusable manipulation skills, execution feedback and coordination between the robots, giving the team a more focused set of architecture questions to investigate.
+**Focused the software research with Tong and Ethan.** Karthigan, Tong and Ethan narrowed the investigation to how two mobile robots could work together on a shared task. Discussed how to break tasks into steps, coordinate movements and respond when a task does not go as planned.
 
-**Formulated preliminary architecture documents.** Outlined general approaches for connecting high-level planning, perception, task execution and local robot control. The early documents compared possible planning and coordination structures, described how the major components could exchange task and state information, and recorded open questions for further research. These preliminary directions provided a basis for the later architecture proposals and task-graph experiments.
+**Outlined preliminary approaches.** Prepared early architecture documents explaining how the robots' planning, sensing and movement could work together. These recorded possible approaches and questions requiring further research, giving the team a shared direction for later design and prototyping.
