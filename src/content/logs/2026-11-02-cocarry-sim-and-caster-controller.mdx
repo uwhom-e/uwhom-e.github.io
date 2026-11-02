@@ -1,0 +1,96 @@
+---
+title: "Co-Carry Simulator and Caster Leader–Follower Controller"
+date: 2026-11-02
+summary: "Built a MuJoCo co-carry sim with a per-robot sensing/command interface and a ROS 2 bridge, then a caster-style leader–follower controller that cuts follower force by over 100× compared with a stiff follower."
+tags: ["software", "simulation"]
+---
+
+import Video from '../../components/Video.astro';
+
+**Author:** Ethan · Oct 20 – Nov 2
+
+## Overview
+
+We set up a simulator in MuJoCo so we can test control architectures before the hardware is complete.
+
+#### Simulator
+The sim (`sim/` in the monorepo) puts N mobile manipulators and one rigid payload in a scene. Each robot is a Stanford TidyBot from MuJoCo Menagerie: a holonomic base, a Kinova Gen3 arm and a Robotiq 2F-85 gripper. The payload starts on a pair of stands, and a second pair of stands marks the destination.
+
+Each robot gets an onboard-style interface:
+
+- **Sense:** drifting odometry, joint angles, velocities and torques, a wrist force/torque sensor, and the end-effector pose. Base-frame views (`ee_in_base`, `wrist_wrench_base`) need no world-frame knowledge.
+- **Command:** base twist (body or world frame), arm joint targets, IK reach (world or base frame), gripper, and an optional rigid (weld) grasp.
+- **Ground truth** is kept separate and used only for scoring.
+
+The rule is that algorithms only call `Robot` methods. That way the same code moves to the ROS 2 bridge and then to hardware.
+
+The rest of the package:
+
+- **`Sim`** steps the scene at a fixed control rate, opens the viewer, records MP4 video on sim time, and stops on divergence instead of letting MuJoCo silently reset.
+- **ROS 2 bridge** runs in WSL and exposes each robot as `/rN/odom`, `/rN/cmd_vel`, `/rN/joint_states`, `/rN/wrist_wrench`, `/rN/arm/joint_command` and `/rN/gripper/command`, plus `/clock` and ground-truth poses. A setup script installs ROS 2 Jazzy and ros2_control.
+- **Smoke test:** two robots grasp the bar ends, lift it together, carry it 0.6 m to the second stands and set it down.
+- **Sandbox:** random spawns and numpad teleop of one robot's base in the viewer.
+
+<Video src="videos/2026-11-02-sim-smoke.mp4" caption="Smoke test: two TidyBots lift the bar, carry it 0.6 m and set it on the second stands" />
+
+<Video src="videos/2026-11-02-sim-smoke-wrist.mp4" caption="The same smoke test from a robot's wrist camera" />
+
+On Nov 2 I moved the sim out of `ctrl/` to the top level of the monorepo, so controllers live separately and only their examples import the sim. I also added the base-frame helpers the controller needed (`ee_in_base()`, `wrist_wrench_base()`, `reach_base()`, `hold_arm()`) and fixed a bug in `rigid_grasp()`: it never cleared the weld's default anchor of (0, 1, 0), so turning the weld on threw the payload about 1 m.
+
+#### Caster leader–follower controller
+The first controller in the sim (`ctrl/caster_ctrl/`) is leader–follower co-carry, with followers that act like the virtual caster from Hirata, Kume, Sawada, Wang and Kosuge, *Handling of an Object by Multiple Mobile Manipulators in Coordination based on Caster-like Dynamics* (ICRA 2004).
+
+- **Leader:** the operator drives the **object** with the numpad. The leader turns that twist into a desired object pose and then into a target for its own gripper and base.
+- **Follower:** gets no messages. It reads only its own wrist force, joint angles and odometry, turns its heading toward the pull, yields along it, and estimates where the leader is going.
+
+One follower tick:
+
+1. Tare, sign-flip and low-pass the wrist force.
+2. Turn the heading toward the force, treating it as an axis so it doesn't swing 180° when the force reverses.
+3. Split the force along and across the heading.
+4. Along the heading: a mass–spring–damper (Eq. 3 in the paper).
+5. A leader-trajectory estimator, G₁(s) = (a₁s + b₁)/s², moves the follower's reference so it tracks a leader moving at constant speed with no lag.
+6. Across the heading: damping only, like a caster swivelling.
+7. Vertical and grasp yaw are handled the same way (yaw as a damped free joint).
+8. Split the gripper target between the arm and the base.
+
+Around this sit a scripted grasp → lift → settle → tare phase machine, numpad object teleop with speed and acceleration limits, a per-tick CSV log with a run summary, and 8 NumPy-only unit tests. Nothing in the controller imports the sim.
+
+<Video src="videos/2026-11-02-caster-ctrl.mp4" caption="Caster leader–follower co-carry, with the object driven by numpad teleop" />
+
+#### Results
+A scripted test matrix with a 2 kg × 1.4 m bar, rigid grasp, at 250 Hz. F is the follower's internal force (tared wrist force), and pos err is the final object position against the commanded pose.
+
+| Scenario | Stiff follower F rms / peak | Caster F rms / peak | Caster pos err |
+| --- | --- | --- | --- |
+| Hold 5 s | 5.3 / 12.5 N | 0.9 / 10.4 N | 0.3 cm |
+| 0.6 m along the bar | 930 / 4162 N, stalled | 1.9 / 10.4 N | 0.2 cm |
+| 0.6 m across the bar | 176 / 243 N, stalled | 1.9 / 10.4 N | 0.2 cm |
+| Lift and lower 0.1 m | 12.6 / 21.9 N | 0.9 / 10.4 N | 0.3 cm |
+| Yaw 45° in place | 397 / 543 N, stalled | 3.9 / 10.4 N | 3.0 cm |
+| L-path 0.5 m + 0.5 m | 838 / 4162 N, stalled | 2.2 / 10.4 N | 0.2 cm |
+
+The caster follower meets the pass bar on every scenario: RMS under 5 N, peak under 20 N, error at most 3 cm, and at least 5× below the stiff follower. The stiff follower stalls in four of the six. The 10.4 N peak is the same small transient at the start of every carry.
+
+#### Changes from the design doc
+- **Wrench low-pass at 40 Hz, not 15 Hz.** At 15 Hz the filter lag let the two robots ring at about 11 Hz along the bar and diverge.
+- **Grasp yaw damping of 20 N·m·s/rad, not 2.** The softer damper went unstable against the stiff arm at 250 Hz.
+- **Stiff leader by default.** A compliant leader also works but gives way, leaving the object 3–9 cm off the command.
+- **Estimator γ = 2 kept with the stiff leader.** The exact value for a stiff leader is 1, but 2 gave lower forces in every scenario.
+- **Heading tracks a 90° turn in about 0.9 s, not 0.5 s,** because of the 2 rad/s rate cap.
+
+## What we did
+
+- Built a MuJoCo co-carry sim with N TidyBots, a payload, an onboard-style per-robot interface, a video recorder and a smoke test
+- Added a ROS 2 bridge and a WSL setup script
+- Moved the sim to the top level of the monorepo and fixed the weld-anchor bug in `rigid_grasp()`
+- Implemented the caster leader–follower controller with unit tests and a scripted scenario matrix
+- Showed the caster follower keeps internal force under 4 N RMS in every scenario, where a stiff follower stalls in four of six
+
+## Next steps
+
+- Commit `ctrl/` to the monorepo
+- Try three or more robots (the paper's "virtual leader") and side grasps
+- Run friction grasps instead of the weld
+- Robustness sweeps over mass, odometry noise, wrench delay and gain mismatch
+- Build ROS 2 nodes on top of the bridge
