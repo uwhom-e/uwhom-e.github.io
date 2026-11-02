@@ -59,20 +59,20 @@ Putting the actuators behind the relay means either the E-stop or the ESP32 can 
 
 #### Karthigan
 
-##### Software Planning & Cooperative Tasks
+##### Organizing Cooperative Tasks with a DAG
 
-**Developed the software approach.** Expanded the preliminary research into a proposal for how two mobile robots could plan and carry out shared tasks. Explored how the robots could choose where to hold an object, share its weight, coordinate their movements and respond when conditions change.
+**Added a task graph to coordinate actions.** Built on Ethan's existing simulation work by introducing a directed acyclic graph (DAG): a map showing how task steps depend on one another. The graph determines which actions can happen together and which must wait, such as lifting only after both robots have grasped the object.
 
-**Built an early coordination demonstration in simulation.** Developed a prototype that organizes a carrying task into clear steps: approach the object, grasp it, lift together, carry it to a new location and place it down. The demonstration shows the robots coordinating their actions, including waiting until both have grasped the object before lifting.
+**Separated task order from individual actions.** Organized the existing co-carry motions into reusable steps for these experiments: approach, grasp, lift, carry, lower and release. This makes it possible to try different task structures without rewriting each action. Added explicit grasp locations and checks for whether steps can start, have finished, and whether the robots are still holding the object between steps.
 
-**Explored different ways to coordinate the work.** Tested which actions the robots could perform independently and which needed to wait for their partner. This provides a practical starting point for refining the team's approach and trying other cooperative tasks before moving to physical robot testing.
+**Tested the DAG in simulation.** Used the existing co-carry demonstration to run different task structures, including robots acting in parallel or taking turns. The video shows the task graph directing the sequence of actions in the simulation.
 
-<Video src="videos/2026-11-02-dag-cocarry.mp4" caption="Early simulation of two robots lifting, carrying and placing an object together." />
+<Video src="videos/2026-11-02-dag-cocarry.mp4" caption="The task graph directing a shared carrying task in the existing simulation." />
 
 ## Next steps
 
 - Lock in the RGB-D wrist camera and add it to the BOM
 - Follow up with sponsors on the pitch
 - Check the power budget against the servo and wheel stall currents, then order parts
-- Try other cooperative tasks, such as passing an object between robots or holding it steady while the other works
-- Connect task planning with the robots' sensing and movement systems
+- Refine how shared tasks are described and checked in the task graph
+- Try task graphs for other cooperative actions, such as passing an object or holding it steady
