@@ -1,0 +1,385 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "2.0.0-action-experimental.1",
+        "2.1.0-action-experimental.1",
+        "2.2.0-action-experimental.1"
+      ]
+    },
+    "skill_catalog_version": {
+      "const": "cocarry-action/0.1.0"
+    },
+    "plan_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "entry_node": {
+      "$ref": "#/$defs/identifier"
+    },
+    "global_state": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "string",
+              "number",
+              "integer",
+              "boolean",
+              "object",
+              "array",
+              "null"
+            ]
+          },
+          "value": {}
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "name": {
+            "$ref": "#/$defs/identifier"
+          },
+          "inputs": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/identifier"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/identifier"
+            }
+          },
+          "outputs": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/identifier"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/identifier"
+            }
+          },
+          "outbound_edges": {
+            "description": "Node-owned outgoing edges. Version 2.2 uses explicit exclusive/fork routing; earlier versions use ordered first-match.",
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "items": {
+              "type": "object",
+              "properties": {
+                "to": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/identifier"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "condition": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/condition"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "otherwise": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "otherwise"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "to",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "timeout_s": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 120
+          },
+          "activation": {
+            "enum": [
+              "any",
+              "all"
+            ],
+            "description": "any accepts one selected incoming path; all waits for every incoming route to resolve and all selected predecessors to arrive (2.2). Earlier versions require all structural predecessors."
+          },
+          "routing": {
+            "enum": [
+              "exclusive",
+              "fork"
+            ],
+            "description": "2.2 only: exclusive selects exactly one true guard (or otherwise); fork selects all true guards. Edge order is not priority."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "inputs",
+          "outputs",
+          "outbound_edges",
+          "timeout_s"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "entry_nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "skill_catalog_version",
+    "plan_id",
+    "global_state",
+    "nodes"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experimental physical action DAG with engine-owned global state",
+  "description": "Versioned physical action graphs with engine-owned state and routing. Version 2.2 adds exclusive choices, general conditional forks and joins over selected branches; null ends one lane.",
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "minLength": 1,
+      "maxLength": 64,
+      "not": {
+        "pattern": "[\\r\\n]"
+      }
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "always": {
+              "const": true
+            }
+          },
+          "required": [
+            "always"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/$defs/identifier"
+            },
+            "path": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                ]
+              }
+            },
+            "op": {
+              "enum": [
+                "eq",
+                "ne",
+                "lt",
+                "lte",
+                "gt",
+                "gte",
+                "contains"
+              ]
+            },
+            "value": {}
+          },
+          "required": [
+            "state",
+            "op",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "$ref": "#/$defs/condition"
+              }
+            }
+          },
+          "required": [
+            "all"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "$ref": "#/$defs/condition"
+              }
+            }
+          },
+          "required": [
+            "any"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/condition"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "2.0.0-action-experimental.1"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "entry_node"
+        ],
+        "not": {
+          "required": [
+            "entry_nodes"
+          ]
+        },
+        "properties": {
+          "nodes": {
+            "items": {
+              "not": {
+                "required": [
+                  "activation"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "required": [
+          "entry_nodes"
+        ],
+        "not": {
+          "required": [
+            "entry_node"
+          ]
+        },
+        "properties": {
+          "nodes": {
+            "items": {
+              "required": [
+                "activation"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "2.2.0-action-experimental.1"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "required": [
+                "routing"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "not": {
+                "required": [
+                  "routing"
+                ]
+              },
+              "properties": {
+                "outbound_edges": {
+                  "items": {
+                    "properties": {
+                      "condition": {
+                        "$ref": "#/$defs/condition"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

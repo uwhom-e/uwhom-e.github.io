@@ -1,0 +1,355 @@
+{
+  "schema_version": "2.2.0-action-experimental.1",
+  "skill_catalog_version": "cocarry-action/0.1.0",
+  "plan_id": "example_parallel_conditional_carry",
+  "entry_nodes": [
+    "approach_r0",
+    "approach_r1"
+  ],
+  "global_state": {
+    "robot_r0": {
+      "type": "string",
+      "value": "r0"
+    },
+    "robot_r1": {
+      "type": "string",
+      "value": "r1"
+    },
+    "payload": {
+      "type": "string",
+      "value": "payload"
+    },
+    "site_a": {
+      "type": "string",
+      "value": "end_a"
+    },
+    "site_b": {
+      "type": "string",
+      "value": "end_b"
+    },
+    "destination": {
+      "type": "string",
+      "value": "destination_stands"
+    },
+    "height": {
+      "type": "number",
+      "value": 0.15
+    },
+    "speed": {
+      "type": "number",
+      "value": 0.1
+    },
+    "speed_slow": {
+      "type": "number",
+      "value": 0.05
+    },
+    "robot_state": {
+      "type": "object"
+    }
+  },
+  "nodes": [
+    {
+      "id": "approach_r0",
+      "name": "approach",
+      "inputs": {
+        "robot": "robot_r0",
+        "object_id": "payload",
+        "grasp_site": "site_a"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "grasp_r0",
+          "condition": {
+            "state": "robot_state",
+            "path": [
+              "approached_sites",
+              "r0"
+            ],
+            "op": "eq",
+            "value": "end_a"
+          }
+        }
+      ],
+      "timeout_s": 12
+    },
+    {
+      "id": "grasp_r0",
+      "name": "grasp",
+      "inputs": {
+        "robot": "robot_r0",
+        "object_id": "payload",
+        "grasp_site": "site_a"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "lift",
+          "condition": {
+            "state": "robot_state",
+            "path": [
+              "holders"
+            ],
+            "op": "contains",
+            "value": "r0"
+          }
+        }
+      ],
+      "timeout_s": 12
+    },
+    {
+      "id": "approach_r1",
+      "name": "approach",
+      "inputs": {
+        "robot": "robot_r1",
+        "object_id": "payload",
+        "grasp_site": "site_b"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "grasp_r1",
+          "condition": {
+            "state": "robot_state",
+            "path": [
+              "approached_sites",
+              "r1"
+            ],
+            "op": "eq",
+            "value": "end_b"
+          }
+        }
+      ],
+      "timeout_s": 12
+    },
+    {
+      "id": "grasp_r1",
+      "name": "grasp",
+      "inputs": {
+        "robot": "robot_r1",
+        "object_id": "payload",
+        "grasp_site": "site_b"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "lift",
+          "condition": {
+            "state": "robot_state",
+            "path": [
+              "holders"
+            ],
+            "op": "contains",
+            "value": "r1"
+          }
+        }
+      ],
+      "timeout_s": 12
+    },
+    {
+      "id": "lift",
+      "name": "lift",
+      "inputs": {
+        "carrier_a": "robot_r0",
+        "carrier_b": "robot_r1",
+        "object_id": "payload",
+        "height_m": "height"
+      },
+      "activation": "all",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "transport",
+          "condition": {
+            "state": "robot_state",
+            "path": [
+              "payload_position",
+              2
+            ],
+            "op": "gte",
+            "value": 0.6
+          }
+        },
+        {
+          "to": "transport_slow",
+          "condition": {
+            "otherwise": true
+          }
+        }
+      ],
+      "timeout_s": 12
+    },
+    {
+      "id": "transport",
+      "name": "transport",
+      "inputs": {
+        "carrier_a": "robot_r0",
+        "carrier_b": "robot_r1",
+        "object_id": "payload",
+        "destination_id": "destination",
+        "speed_mps": "speed"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "lower",
+          "condition": {
+            "all": [
+              {
+                "state": "robot_state",
+                "path": [
+                  "holders"
+                ],
+                "op": "contains",
+                "value": "r0"
+              },
+              {
+                "state": "robot_state",
+                "path": [
+                  "holders"
+                ],
+                "op": "contains",
+                "value": "r1"
+              }
+            ]
+          }
+        }
+      ],
+      "timeout_s": 25
+    },
+    {
+      "id": "lower",
+      "name": "lower",
+      "inputs": {
+        "carrier_a": "robot_r0",
+        "carrier_b": "robot_r1",
+        "object_id": "payload",
+        "destination_id": "destination"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "release",
+          "condition": {
+            "state": "robot_state",
+            "path": [
+              "destination_supported"
+            ],
+            "op": "eq",
+            "value": true
+          }
+        }
+      ],
+      "timeout_s": 12
+    },
+    {
+      "id": "release",
+      "name": "release",
+      "inputs": {
+        "carrier_a": "robot_r0",
+        "carrier_b": "robot_r1",
+        "object_id": "payload"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": null,
+          "condition": {
+            "all": [
+              {
+                "state": "robot_state",
+                "path": [
+                  "released"
+                ],
+                "op": "eq",
+                "value": true
+              },
+              {
+                "state": "robot_state",
+                "path": [
+                  "destination_supported"
+                ],
+                "op": "eq",
+                "value": true
+              }
+            ]
+          }
+        }
+      ],
+      "timeout_s": 10
+    },
+    {
+      "id": "transport_slow",
+      "name": "transport",
+      "inputs": {
+        "carrier_a": "robot_r0",
+        "carrier_b": "robot_r1",
+        "object_id": "payload",
+        "destination_id": "destination",
+        "speed_mps": "speed_slow"
+      },
+      "activation": "any",
+      "routing": "exclusive",
+      "outputs": {
+        "observation": "robot_state"
+      },
+      "outbound_edges": [
+        {
+          "to": "lower",
+          "condition": {
+            "all": [
+              {
+                "state": "robot_state",
+                "path": [
+                  "holders"
+                ],
+                "op": "contains",
+                "value": "r0"
+              },
+              {
+                "state": "robot_state",
+                "path": [
+                  "holders"
+                ],
+                "op": "contains",
+                "value": "r1"
+              }
+            ]
+          }
+        }
+      ],
+      "timeout_s": 25
+    }
+  ]
+}

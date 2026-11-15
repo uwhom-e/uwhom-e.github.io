@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark"><title>Task workspace · uw home</title>
+  <link rel="stylesheet" href="./style.css"><script src="./app.js" defer></script>
+<link rel="stylesheet" href="./replay.css"></head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="Task workspace home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17V7h5v10m6 0V7h5v10M4 12h16"/></svg><span>uw home</span></a>
+    <span class="header-divider"></span><span class="breadcrumb">Workspace <span>/</span> <strong>Task orchestration</strong></span>
+    <div class="top-actions"><span class="connection" id="connection"><i></i> Connecting</span><button class="icon-button" id="theme" aria-label="Switch color theme" title="Switch color theme">◐</button></div>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div><div class="eyebrow" id="run-name">LOCAL WORKSPACE</div><h1 id="task-title">From intention to action.</h1><p id="task-prompt">Waiting for a planning or execution trace.</p></div>
+      <div class="heading-actions"><span id="run-status" class="status-pill">Waiting</span><button class="subtle-button" id="copy-link">Copy link <span>↗</span></button></div>
+    </section>
+    <section class="pipeline" aria-label="Planning and execution progress">
+      <div id="pipeline-stages" class="pipeline-stages"></div><span class="call-count" id="call-count">Local trace</span>
+    </section>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section class="workspace-grid">
+      <section class="graph-panel" aria-label="Action graph">
+        <div class="panel-toolbar"><div class="view-tabs"><button class="tab active" id="graph-tab" aria-selected="true">Action graph</button><button class="tab" id="activity-tab" aria-selected="false">Activity</button></div><div class="graph-meta"><span id="node-count">0 actions</span><span class="draft-badge" id="draft-badge" hidden>Draft · not validated</span></div></div>
+        <div class="canvas" id="canvas">
+          <div class="canvas-top"><span class="canvas-caption" id="canvas-caption">TASK FLOW</span><label class="condition-toggle"><input id="conditions" type="checkbox"> Edge conditions</label></div>
+          <svg id="graph" role="group" aria-label="Interactive action graph" tabindex="0"><defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="context-stroke"/></marker><filter id="card-shadow" x="-20%" y="-25%" width="140%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity=".035"/></filter></defs><g id="viewport"><g id="edges"></g><g id="nodes"></g></g></svg>
+          <div class="empty-state" id="empty-state"><div class="empty-symbol"><span></span><span></span><span></span></div><h2>Waiting for the graph</h2><p>Actions will appear here as the planner generates them.</p><span id="generation-detail"></span></div>
+          <div class="canvas-bottom"><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit" aria-label="Fit graph">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div><div class="legend"><span><i class="running"></i>Active</span><span><i class="succeeded"></i>Complete</span><span><i class="recovering"></i>Recovering</span></div></div>
+        </div>
+        <div id="activity-view" class="activity-view" hidden><div class="activity-heading"><h2>Execution activity</h2><p>Observed transitions, routing decisions, and continuations.</p></div><ol id="activity-list"></ol></div>
+        <div class="playback"><button id="play" class="play-button" aria-label="Play replay" title="Play replay">▶</button><button id="previous" class="icon-button" aria-label="Previous event" title="Previous event">‹</button><input id="timeline" type="range" min="0" max="1" step="0.004" value="0" aria-label="Replay time"><button id="next" class="icon-button" aria-label="Next event" title="Next event">›</button><span class="time" id="time">0.0 s</span><select id="speed" aria-label="Playback speed"><option value=".5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select><button id="follow" class="follow active"><i></i>Live</button></div>
+      </section>
+      <aside class="side-panel">
+        <section class="fleet-section"><div class="section-title"><h2>Task distribution</h2><span id="robot-count">—</span></div><div id="robots" class="robots"><p class="muted">Robot assignments appear with the plan.</p></div><p class="fleet-caption">Shared actions are assigned to both robots.</p></section>
+        <section class="inspector"><div class="section-title"><h2>Action details</h2><span class="tiny-label" id="inspector-mode">INSPECT</span></div><div id="node-detail"><div class="inspector-empty">Select an action to inspect its inputs, progress, and next steps.</div></div></section>
+        <div class="side-footer"><a href="./plan.json" id="download-plan" download hidden>Download plan <span>↓</span></a><a href="./video.mp4" id="recording" target="_blank" rel="noopener" hidden>View recording <span>↗</span></a><span>Recorded trace · read-only replay</span></div>
+      </aside>
+    </section>
+    <footer class="page-footer"><span id="pipeline-message">Connected to local run files.</span><span id="mode-label">Live observation</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

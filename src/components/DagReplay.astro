@@ -1,0 +1,82 @@
+---
+const base = '/demos/2026-11-14-dag';
+---
+<section class="dag-demo" aria-label="Synchronized co-carry simulation and action graph replay">
+  <div class="demo-heading"><div><span class="eyebrow">CO-CARRY / EXECUTION REPLAY</span><h3>One task. Two robots. A different way forward.</h3></div><span class="recorded">Recorded in MuJoCo</span></div>
+  <div class="demo-grid">
+    <div class="simulation-pane">
+      <div class="pane-label"><span>01 / Physical execution</span><span>Simulation</span></div>
+      <video controls playsinline preload="metadata" poster={`${base}/poster.jpg`} aria-label="Two simulated mobile robots carry a beam after recovering from a failed grasp service">
+        <source src={`${base}/video.mp4`} type="video/mp4" />
+        <a href={`${base}/video.mp4`}>Download the co-carry recording</a>
+      </video>
+      <div class="replay-story" aria-live="polite"><span class="story-label">WHAT TO WATCH</span><strong data-story-title>Both robots approach their assigned grasp sites.</strong><p data-story-detail>The two approach actions can run together. Each robot is assigned one end of the beam.</p></div>
+      <div class="chapters" aria-label="Jump to a recorded stage">
+        <button type="button" data-seek="0">Approach</button><button type="button" data-seek="2.8">Failure + repair</button><button type="button" data-seek="10">Lift</button><button type="button" data-seek="14">Carry</button><button type="button" data-seek="22.4">Release</button>
+      </div>
+    </div>
+    <div class="graph-pane">
+      <div class="pane-label"><span>02 / Engine + task distribution</span><a href={`${base}/index.html`} target="_blank" rel="noopener">Open full UI ↗</a></div>
+      <iframe src={`${base}/index.html?embed=1`} title="Action graph and robot task assignments synchronized to the recorded simulation" loading="lazy"></iframe>
+    </div>
+  </div>
+  <p class="demo-caption">Play or scrub the video to follow both views. The graph uses the execution workspace’s UI and recorded events from this same run. This is a replay, not a live connection to robots. The recording starts with a saved, validated graph; initial LLM generation is demonstrated separately.</p>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.dag-demo').forEach(root => {
+    const video = root.querySelector('video')!;
+    const frame = root.querySelector('iframe')!;
+    const title = root.querySelector('[data-story-title]')!;
+    const detail = root.querySelector('[data-story-detail]')!;
+    const stories = [
+      [0, 'Both robots approach their assigned grasp sites.', 'The two approach actions can run together. Each robot is assigned one end of the beam.'],
+      [2.776, 'Robot R0’s combined grasp service reports failure.', 'The engine searches available skill contracts for another way to establish the required hold. Robot R1 continues its own grasp.'],
+      [2.788, 'The new continuation begins: align the gripper.', 'The engine selected align_gripper → close_gripper. These are physical skill invocations in a separate continuation DAG.'],
+      [4.548, 'Close the gripper and verify the hold.', 'R0 executes the second recovery skill. The shared lift remains blocked until both robots have established a hold.'],
+      [9.6, 'The required hold is observed. The original graph resumes.', 'Recovery fulfils the failed node’s outcome; the unsuccessful attempt remains recorded. The two robot lanes join for the shared lift.'],
+      [11.4, 'Both robots carry the beam together.', 'The engine dispatches shared actions to both robots. The simulated skills handle the coordinated movement.'],
+      [18.492, 'Place the beam on its destination supports.', 'The graph proceeds through lowering. Completion is checked against observations.'],
+      [20.416, 'Release the beam on its supports.', 'The robots open their grippers and retreat. The engine still needs to verify the final task outcome.'],
+      [23.132, 'The task outcome is verified.', 'The beam is supported at its destination and both robots have released it. The unused conditional branch is marked skipped.'],
+    ] as const;
+    let lastStory = -1;
+    function sync() {
+      const at = video.ended ? 23.132 : video.currentTime;
+      frame.contentWindow?.postMessage({ type: 'dag-replay-time', time: at }, window.location.origin);
+      let index = 0;
+      for (let i = 0; i < stories.length; i++) if (at >= stories[i][0]) index = i;
+      if (index !== lastStory) { title.textContent = stories[index][1]; detail.textContent = stories[index][2]; lastStory = index; }
+    }
+    ['timeupdate', 'seeked', 'loadedmetadata', 'ended', 'pause'].forEach(event => video.addEventListener(event, sync));
+    window.addEventListener('message', event => {
+      if (event.origin === location.origin && event.source === frame.contentWindow && event.data?.type === 'dag-replay-ready') sync();
+    });
+    root.querySelectorAll<HTMLButtonElement>('[data-seek]').forEach(button => button.addEventListener('click', () => {
+      video.currentTime = Number(button.dataset.seek); sync();
+    }));
+  });
+</script>
+
+<style>
+  .dag-demo{margin:2rem 0;border:1px solid #d7dfe1;border-radius:16px;overflow:hidden;background:#fff;color:#182a31;box-shadow:0 8px 30px #152b3510;font-family:Arial,Helvetica,sans-serif}
+  .demo-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;border-bottom:1px solid #e4e9eb}
+  .eyebrow,.story-label{font-size:10px;letter-spacing:1.4px;color:#61747e;font-weight:700}
+  .demo-heading h3{font-size:20px;line-height:1.3;margin:7px 0 0;color:#182a31;text-transform:none;letter-spacing:-.4px}
+  .recorded{font-size:10px;white-space:nowrap;border:1px solid #dce4e7;border-radius:20px;padding:7px 10px;color:#526973}
+  .demo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .graph-pane{border-left:1px solid #e4e9eb;min-width:0}
+  .pane-label{height:44px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #e4e9eb;font-size:10px;color:#526973}
+  .pane-label a{font-size:10px;color:#16636b;text-decoration:none;white-space:nowrap}
+  video{display:block;width:100%;aspect-ratio:16/9;background:#172024;margin:0}
+  iframe{display:block;width:100%;height:540px;border:0;background:#fafbfc}
+  .replay-story{padding:20px 20px 12px;min-height:146px}
+  .replay-story strong{display:block;font-size:17px;line-height:1.4;margin-top:8px;color:#20323a}
+  .replay-story p{font-size:13px;line-height:1.65;color:#60717a;margin:8px 0 0}
+  .chapters{display:flex;gap:7px;flex-wrap:wrap;padding:0 20px 20px}
+  .chapters button{font:11px Arial,sans-serif;background:#f5f8f8;border:1px solid #dbe4e6;border-radius:6px;padding:7px 10px;color:#324f59;cursor:pointer}
+  .chapters button:hover{background:#e6f1ef}.chapters button:focus-visible{outline:2px solid #137f80;outline-offset:2px}
+  .demo-caption{margin:0!important;padding:15px 24px;border-top:1px solid #e4e9eb;background:#f7f9f9;font-size:11px;line-height:1.7;color:#60717a}
+  @media(min-width:1150px){.dag-demo{width:calc(100% + 160px);margin-left:-80px}}
+  @media(max-width:700px){.demo-grid{grid-template-columns:1fr}.graph-pane{border-left:0;border-top:1px solid #e4e9eb}.demo-heading{padding:18px;align-items:flex-start}.recorded{display:none}.demo-heading h3{font-size:18px}iframe{height:500px}.replay-story{min-height:0}.demo-caption{padding:14px 18px}}
+</style>

@@ -1,0 +1,794 @@
+{
+  "catalog_version": "cocarry-action/0.1.0",
+  "description": "Trusted low-level simulator API exposed to the planner. All ports required. observation is the returned SimulationContext.snapshot().",
+  "skills": {
+    "approach": {
+      "description": "Move one unoccupied arm to the named payload site's pregrasp pose and settle. Records approached_sites[robot].",
+      "inputs": {
+        "robot": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "grasp_site": {
+          "type": "string",
+          "enum": [
+            "end_a",
+            "end_b"
+          ],
+          "description": "Named payload grasp site: end_a is local -X; end_b is local +X."
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "robot"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "grasp_site"
+      ],
+      "behavioral_contract": {
+        "resources": {
+          "exclusive_robot_inputs": [
+            "robot"
+          ]
+        },
+        "preconditions": [
+          "one unoccupied robot",
+          "known object and grasp site"
+        ],
+        "maintained_conditions": [
+          "finite robot/object state",
+          "other established holds remain valid"
+        ],
+        "completion": {
+          "observations": [
+            "end-effector position/orientation at pregrasp target",
+            "arm joint velocity settled"
+          ],
+          "dwell_s": 0.25,
+          "minimum_motion_time_s": 2.0,
+          "elapsed_time_alone_completes": false
+        },
+        "effects": [
+          "record approached site for this robot"
+        ],
+        "failure_codes": [
+          "APPROACH_PRECONDITION",
+          "GRASP_LOST",
+          "IK_UNREACHABLE",
+          "NONFINITE_STATE",
+          "TIMEOUT",
+          "UNKNOWN_GRASP_SITE"
+        ],
+        "recovery": "engine policy registry; no graph cycle or automatic LLM call"
+      }
+    },
+    "grasp": {
+      "description": "Requires a live approach to the same site. Close the gripper and verify bilateral payload contact; retain the hold after returning.",
+      "inputs": {
+        "robot": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "grasp_site": {
+          "type": "string",
+          "enum": [
+            "end_a",
+            "end_b"
+          ],
+          "description": "Named payload grasp site: end_a is local -X; end_b is local +X."
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "robot"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "grasp_site"
+      ],
+      "behavioral_contract": {
+        "resources": {
+          "exclusive_robot_inputs": [
+            "robot"
+          ]
+        },
+        "preconditions": [
+          "one approached unoccupied robot",
+          "same grasp site",
+          "still near pregrasp pose"
+        ],
+        "maintained_conditions": [
+          "finite robot/object state",
+          "other established holds remain valid"
+        ],
+        "completion": {
+          "observations": [
+            "end-effector pose reached and arm settled",
+            "bilateral payload contact on this gripper"
+          ],
+          "dwell_s": 0.25,
+          "minimum_motion_time_s": 2.3,
+          "elapsed_time_alone_completes": false
+        },
+        "effects": [
+          "record grasp site and relative pose",
+          "persistent hold obligation continues after node completion"
+        ],
+        "failure_codes": [
+          "APPROACH_STALE",
+          "GRASP_LOST",
+          "GRASP_PRECONDITION",
+          "GRASP_SITE_MISMATCH",
+          "IK_UNREACHABLE",
+          "NONFINITE_STATE",
+          "TIMEOUT"
+        ],
+        "recovery": "engine policy registry; no graph cycle or automatic LLM call"
+      }
+    },
+    "lift": {
+      "description": "Requires two distinct confirmed holders. Raise the payload by height_m and verify measured lift and settled motion.",
+      "inputs": {
+        "carrier_a": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "carrier_b": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "height_m": {
+          "type": "number",
+          "minimum": 0.02,
+          "maximum": 0.25
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "carrier_a",
+        "carrier_b"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "height_m"
+      ],
+      "behavioral_contract": {
+        "resources": {
+          "exclusive_robot_inputs": [
+            "carrier_a",
+            "carrier_b"
+          ]
+        },
+        "preconditions": [
+          "two distinct confirmed holders",
+          "2.2 engine: both measured grasps currently valid; no active repair"
+        ],
+        "maintained_conditions": [
+          "both established grasps remain valid"
+        ],
+        "completion": {
+          "observations": [
+            "end-effector target poses reached and arms settled",
+            "measured payload rise >= 0.8 * height_m",
+            "payload linear velocity < 0.05 m/s"
+          ],
+          "dwell_s": 0.25,
+          "minimum_motion_time_s": 1.5,
+          "elapsed_time_alone_completes": false
+        },
+        "effects": [
+          "payload lifted; holding obligations persist"
+        ],
+        "failure_codes": [
+          "GRASP_LOST",
+          "HEIGHT_LIMIT",
+          "HOLDERS_REQUIRED",
+          "IK_UNREACHABLE",
+          "NONFINITE_STATE",
+          "TIMEOUT",
+          "HOLD_NOT_CURRENT"
+        ],
+        "recovery": "engine policy registry; no graph cycle or automatic LLM call"
+      }
+    },
+    "transport": {
+      "description": "Requires both holders and stand clearance. Carry to destination_stands at speed_mps and settle at the destination XY.",
+      "inputs": {
+        "carrier_a": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "carrier_b": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "destination_id": {
+          "const": "destination_stands",
+          "type": "string"
+        },
+        "speed_mps": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 0.15
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "carrier_a",
+        "carrier_b"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "destination_id",
+        "speed_mps"
+      ],
+      "behavioral_contract": {
+        "resources": {
+          "exclusive_robot_inputs": [
+            "carrier_a",
+            "carrier_b"
+          ]
+        },
+        "preconditions": [
+          "both holders",
+          "known destination",
+          "payload above stand clearance"
+        ],
+        "maintained_conditions": [
+          "both established grasps remain valid",
+          "measured payload maintains stand clearance"
+        ],
+        "completion": {
+          "observations": [
+            "payload XY within 0.012 m of destination",
+            "payload linear velocity < 0.035 m/s"
+          ],
+          "dwell_s": 0.4,
+          "minimum_motion_time_s": null,
+          "elapsed_time_alone_completes": false
+        },
+        "effects": [
+          "payload above destination; holding obligations persist"
+        ],
+        "failure_codes": [
+          "GRASP_LOST",
+          "HOLDERS_REQUIRED",
+          "MISSING_DESTINATION",
+          "NONFINITE_STATE",
+          "PAYLOAD_DROPPED",
+          "PAYLOAD_NOT_LIFTED",
+          "SPEED_LIMIT",
+          "TIMEOUT",
+          "HOLD_NOT_CURRENT"
+        ],
+        "recovery": "engine policy registry; no graph cycle or automatic LLM call"
+      }
+    },
+    "lower": {
+      "description": "Requires both holders above destination_stands. Lower until measured contact supports the payload on both stands.",
+      "inputs": {
+        "carrier_a": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "carrier_b": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "destination_id": {
+          "const": "destination_stands",
+          "type": "string"
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "carrier_a",
+        "carrier_b"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "destination_id"
+      ],
+      "behavioral_contract": {
+        "resources": {
+          "exclusive_robot_inputs": [
+            "carrier_a",
+            "carrier_b"
+          ]
+        },
+        "preconditions": [
+          "both holders",
+          "payload above destination stands"
+        ],
+        "maintained_conditions": [
+          "both established grasps remain valid"
+        ],
+        "completion": {
+          "observations": [
+            "end-effector target poses reached and arms settled",
+            "both destination stand contacts",
+            "payload placement in bounds and velocity settled"
+          ],
+          "dwell_s": 0.4,
+          "minimum_motion_time_s": 1.5,
+          "elapsed_time_alone_completes": false
+        },
+        "effects": [
+          "payload supported at destination; holding records persist until release"
+        ],
+        "failure_codes": [
+          "GRASP_LOST",
+          "HOLDERS_REQUIRED",
+          "IK_UNREACHABLE",
+          "NONFINITE_STATE",
+          "NOT_AT_DESTINATION",
+          "TIMEOUT",
+          "HOLD_NOT_CURRENT"
+        ],
+        "recovery": "engine policy registry; no graph cycle or automatic LLM call"
+      }
+    },
+    "release": {
+      "description": "Requires destination support. Open grippers, withdraw, and verify separation while support persists; ends holding obligations.",
+      "inputs": {
+        "carrier_a": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "carrier_b": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "carrier_a",
+        "carrier_b"
+      ],
+      "argument_inputs": [
+        "object_id"
+      ],
+      "behavioral_contract": {
+        "resources": {
+          "exclusive_robot_inputs": [
+            "carrier_a",
+            "carrier_b"
+          ]
+        },
+        "preconditions": [
+          "both holders",
+          "measured settled support on both destination stands"
+        ],
+        "maintained_conditions": [
+          "both stand contacts and placement bounds",
+          "retreat pauses while payload unsettled"
+        ],
+        "completion": {
+          "observations": [
+            "retreat target poses reached and arms settled",
+            "no gripper-payload contact",
+            "settled destination support"
+          ],
+          "dwell_s": 0.4,
+          "minimum_motion_time_s": null,
+          "elapsed_time_alone_completes": false
+        },
+        "effects": [
+          "remove holding obligations",
+          "mark released after verified separation"
+        ],
+        "failure_codes": [
+          "GRASP_LOST",
+          "HOLDERS_REQUIRED",
+          "IK_UNREACHABLE",
+          "NONFINITE_STATE",
+          "RELEASE_UNSETTLED",
+          "RELEASE_UNSUPPORTED",
+          "SUPPORT_LOST",
+          "TIMEOUT",
+          "HOLD_NOT_CURRENT"
+        ],
+        "recovery": "engine policy registry; no graph cycle or automatic LLM call"
+      }
+    },
+    "align_gripper": {
+      "description": "Move the open gripper from pregrasp to contact pose; verify pose and settled arm. Does not hold.",
+      "inputs": {
+        "robot": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "grasp_site": {
+          "type": "string",
+          "enum": [
+            "end_a",
+            "end_b"
+          ],
+          "description": "Named payload grasp site: end_a is local -X; end_b is local +X."
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "robot"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "grasp_site"
+      ]
+    },
+    "close_gripper": {
+      "description": "Close an already aligned open gripper; verify bilateral contact and establish holding. Does not move the arm.",
+      "inputs": {
+        "robot": {
+          "type": "string",
+          "enum": [
+            "r0",
+            "r1"
+          ]
+        },
+        "object_id": {
+          "const": "payload",
+          "type": "string"
+        },
+        "grasp_site": {
+          "type": "string",
+          "enum": [
+            "end_a",
+            "end_b"
+          ],
+          "description": "Named payload grasp site: end_a is local -X; end_b is local +X."
+        }
+      },
+      "outputs": {
+        "observation": {
+          "type": "object",
+          "description": "Complete ground-truth SimulationContext.snapshot() at physical skill completion; only the executor supplies it.",
+          "$ref": "#/$defs/observation"
+        }
+      },
+      "participant_inputs": [
+        "robot"
+      ],
+      "argument_inputs": [
+        "object_id",
+        "grasp_site"
+      ]
+    }
+  },
+  "$defs": {
+    "robot_id": {
+      "type": "string",
+      "enum": [
+        "r0",
+        "r1"
+      ]
+    },
+    "grasp_site": {
+      "type": "string",
+      "enum": [
+        "end_a",
+        "end_b"
+      ]
+    },
+    "vector3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Three numeric coordinates; units are described at each field."
+    },
+    "quaternion_wxyz": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "Payload orientation quaternion in w, x, y, z order."
+    },
+    "payload_velocity": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 6,
+      "maxItems": 6,
+      "description": "Payload free-joint velocity: linear XYZ in m/s, then angular XYZ in rad/s."
+    },
+    "robot_site_map": {
+      "type": "object",
+      "properties": {
+        "r0": {
+          "$ref": "#/$defs/grasp_site"
+        },
+        "r1": {
+          "$ref": "#/$defs/grasp_site"
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "description": "Robot-to-grasp-site map. A robot key can be absent when no corresponding approach or hold is recorded."
+    },
+    "robot_observation": {
+      "type": "object",
+      "properties": {
+        "base_pose": {
+          "$ref": "#/$defs/vector3",
+          "description": "Measured mobile-base X, Y in metres and yaw in radians."
+        },
+        "ee_position": {
+          "$ref": "#/$defs/vector3",
+          "description": "Measured end-effector world XYZ in metres."
+        },
+        "grasp_contacts_n": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "number",
+              "minimum": 0
+            },
+            "right": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "additionalProperties": false,
+          "description": "Summed measured payload-contact normal force on each gripper side, in newtons."
+        }
+      },
+      "required": [
+        "base_pose",
+        "ee_position",
+        "grasp_contacts_n"
+      ],
+      "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "time_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Simulation time when this observation was sampled, in seconds."
+        },
+        "observation_source": {
+          "type": "string",
+          "const": "mujoco_ground_truth"
+        },
+        "grasp_mode": {
+          "type": "string",
+          "const": "contact"
+        },
+        "payload_position": {
+          "$ref": "#/$defs/vector3",
+          "description": "Measured payload world XYZ in metres."
+        },
+        "payload_quaternion_wxyz": {
+          "$ref": "#/$defs/quaternion_wxyz"
+        },
+        "payload_velocity": {
+          "$ref": "#/$defs/payload_velocity"
+        },
+        "holders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/robot_id"
+          },
+          "maxItems": 2,
+          "uniqueItems": true,
+          "description": "2.2 action adapter: robots whose recorded, non-releasing holds have current measured contact/pose validity. Legacy adapters: persistent holding records, retained through in-progress release."
+        },
+        "grasp_sites": {
+          "$ref": "#/$defs/robot_site_map",
+          "description": "Grasp site for each holder represented in this observation."
+        },
+        "approached_sites": {
+          "$ref": "#/$defs/robot_site_map",
+          "description": "Most recently completed approach site for each recorded robot."
+        },
+        "destination_supported": {
+          "type": "boolean",
+          "description": "Both destination stands have measured contact, placement is in bounds, and payload motion is settled."
+        },
+        "released": {
+          "type": "boolean",
+          "description": "Release has completed with separation verified."
+        },
+        "aborted": {
+          "type": "boolean"
+        },
+        "abort_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "robots": {
+          "type": "object",
+          "properties": {
+            "r0": {
+              "$ref": "#/$defs/robot_observation"
+            },
+            "r1": {
+              "$ref": "#/$defs/robot_observation"
+            }
+          },
+          "required": [
+            "r0",
+            "r1"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "time_s",
+        "observation_source",
+        "grasp_mode",
+        "payload_position",
+        "payload_quaternion_wxyz",
+        "payload_velocity",
+        "holders",
+        "grasp_sites",
+        "approached_sites",
+        "destination_supported",
+        "released",
+        "aborted",
+        "abort_reason",
+        "robots"
+      ],
+      "additionalProperties": false,
+      "description": "Complete two-robot simulator observation, returned by physical skills and refreshed by the 2.2 runtime. The trusted observation adapter supplies these facts, never the planner."
+    }
+  },
+  "behavioral_contract_version": "cocarry-behavior/0.1.0",
+  "behavioral_contract_authority": "Planner-facing descriptions of implemented checks, not executable predicates. The trusted primitive and recovery policy implementations enforce them; the LLM cannot redefine them.",
+  "observation_adapter": {
+    "current_source": "mujoco_ground_truth",
+    "required_measurements": [
+      "robot joint position/velocity and forward-kinematic end-effector pose",
+      "localized base pose and payload pose/velocity",
+      "bilateral gripper-payload contact and supported-surface contact",
+      "named grasp-site and destination geometry"
+    ],
+    "deployment_mapping": "Replace simulator queries with calibrated perception/state estimation and contact/force sensing. Map named object sites through estimated object pose. Validate freshness, uncertainty and thresholds before hardware use.",
+    "limitations": "Current poses/contact identities are exact simulator observations; destination and support height come from scene configuration. Approach targets are sampled at action start. No noisy-sensor adapter or moving-target tracking is implemented."
+  },
+  "recovery_policies": {
+    "prelift_grasp_reacquire": {
+      "scope": "action schema 2.2 only",
+      "trigger": "GRASP_LOST for a previously confirmed hold before lift",
+      "guards": [
+        "lift has not started",
+        "both initial stands have measured loaded contact throughout repair; payload settled at repair start",
+        "affected end effector remains aligned to its named grasp site: position error < 0.025 m, orientation error < 0.2 rad, joint velocity norm < 0.35"
+      ],
+      "invalidates": [
+        "affected robot's holding evidence",
+        "affected robot's previous approach evidence"
+      ],
+      "repair": [
+        "trusted recovery-only grasp adapter recloses the affected gripper in place",
+        "retain existing arm servo targets; do not repeat approach or move the unaffected robot"
+      ],
+      "preserves": [
+        "unaffected robot's completed actions and valid hold",
+        "accepted action graph"
+      ],
+      "max_attempts_per_robot": 2,
+      "attempt_bound_semantics": "At most two supported loss episodes per robot; the first failed repair or timeout aborts immediately without retrying that failed repair.",
+      "completion": "Pose stays aligned; bilateral contact persists for 0.25 s after at least 0.4 s of closure; lift requires both current grasps continuously valid for 0.15 s.",
+      "exhaustion": "Stop with explicit failure; no additional LLM call.",
+      "unsupported": "RECOVERY_POSE_INVALID for misalignment; arbitrary object displacement and airborne repair are not implemented."
+    }
+  }
+}

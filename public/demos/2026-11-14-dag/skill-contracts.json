@@ -1,0 +1,381 @@
+{
+  "version": "skill-execution/1.0",
+  "predicates": {
+    "finite": 0,
+    "free": 1,
+    "known_site": 2,
+    "approached": 3,
+    "aligned": 3,
+    "holding": 2,
+    "start_supported": 1,
+    "start_settled": 1,
+    "prelift": 1,
+    "raised": 1,
+    "at_destination": 1,
+    "destination_supported": 1,
+    "released": 1
+  },
+  "skills": {
+    "approach": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "free",
+          "$robot"
+        ],
+        [
+          "known_site",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ]
+      ],
+      "ensures": [
+        [
+          "approached",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "invalidates": [],
+      "persistent": []
+    },
+    "grasp": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "free",
+          "$robot"
+        ],
+        [
+          "known_site",
+          "$object_id",
+          "$grasp_site"
+        ],
+        [
+          "approached",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ]
+      ],
+      "ensures": [
+        [
+          "holding",
+          "$robot",
+          "$object_id"
+        ]
+      ],
+      "invalidates": [
+        [
+          "free",
+          "$robot"
+        ],
+        [
+          "approached",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "persistent": [
+        [
+          "holding",
+          "$robot",
+          "$object_id"
+        ]
+      ]
+    },
+    "lift": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ]
+      ],
+      "ensures": [
+        [
+          "raised",
+          "$object_id"
+        ]
+      ],
+      "invalidates": [],
+      "persistent": [],
+      "ready_dwell_s": 0.15
+    },
+    "transport": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ],
+        [
+          "raised",
+          "$object_id"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ]
+      ],
+      "ensures": [
+        [
+          "at_destination",
+          "$object_id"
+        ]
+      ],
+      "invalidates": [],
+      "persistent": []
+    },
+    "lower": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ],
+        [
+          "at_destination",
+          "$object_id"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ]
+      ],
+      "ensures": [
+        [
+          "destination_supported",
+          "$object_id"
+        ]
+      ],
+      "invalidates": [],
+      "persistent": []
+    },
+    "release": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ],
+        [
+          "destination_supported",
+          "$object_id"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ],
+        [
+          "destination_supported",
+          "$object_id"
+        ]
+      ],
+      "ensures": [
+        [
+          "released",
+          "$object_id"
+        ]
+      ],
+      "invalidates": [
+        [
+          "holding",
+          "$carrier_a",
+          "$object_id"
+        ],
+        [
+          "holding",
+          "$carrier_b",
+          "$object_id"
+        ]
+      ],
+      "persistent": []
+    },
+    "align_gripper": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "free",
+          "$robot"
+        ],
+        [
+          "approached",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ],
+        [
+          "free",
+          "$robot"
+        ]
+      ],
+      "ensures": [
+        [
+          "aligned",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "invalidates": [
+        [
+          "approached",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "persistent": []
+    },
+    "close_gripper": {
+      "requires": [
+        [
+          "finite"
+        ],
+        [
+          "free",
+          "$robot"
+        ],
+        [
+          "aligned",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "maintains": [
+        [
+          "finite"
+        ],
+        [
+          "aligned",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "ensures": [
+        [
+          "holding",
+          "$robot",
+          "$object_id"
+        ]
+      ],
+      "invalidates": [
+        [
+          "free",
+          "$robot"
+        ],
+        [
+          "approached",
+          "$robot",
+          "$object_id",
+          "$grasp_site"
+        ]
+      ],
+      "persistent": [
+        [
+          "holding",
+          "$robot",
+          "$object_id"
+        ]
+      ]
+    }
+  },
+  "recovery_operators": {},
+  "recoveries": []
+}

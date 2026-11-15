@@ -1,0 +1,135 @@
+---
+title: "From Action Graphs to Goal-Based Recovery"
+date: 2026-11-14
+summary: "A week of progress on typed action graphs, parallel robot execution, and a continuation planner that finds a different way forward after a skill fails. Includes a synchronized co-carry simulation and UI replay."
+tags: ["software", "planning", "simulation"]
+---
+
+import Cite from '../../components/Cite.astro';
+import DagReplay from '../../components/DagReplay.astro';
+import { Code } from 'astro:components';
+import schema from '../../../public/demos/2026-11-14-dag/action.schema.json';
+import example from '../../../public/demos/2026-11-14-dag/plan.json';
+import continuation from '../../../public/demos/2026-11-14-dag/continuation.json';
+
+**Author:** Karthigan · November 8–14, 2026
+
+## Overview
+
+This week’s work focused on the layer between a request such as “carry the beam over” and the robot skills that perform it: **how to represent the plan, distribute its actions, and continue when an action fails**.
+
+The result is an action-graph scaffold with typed inputs and outputs, conditional routes, parallel execution, structured failure reporting, and goal-based continuation. An LLM can propose the initial graph in one call. During execution, the engine uses observations and skill contracts to make decisions without calling the LLM again.
+
+This builds on the simulation foundation described in [Ethan’s co-carry design log](/logs/2026-11-02-cocarry-sim-and-caster-controller). The contribution here is the graph and execution architecture. The demonstration uses sample coordinated-motion skills in MuJoCo; it does not demonstrate integration with Ethan’s caster leader–follower controller or operation on physical hardware.
+
+## Co-carry: watch the actions and the engine together
+
+In this recording, the robots approach opposite ends of a beam. We deliberately make **R0’s combined grasp service unavailable** while leaving separate alignment and gripper-closure skills available. Repeating the failed service cannot solve this test. The engine must construct a different sequence, verify that it establishes a hold, and then resume the shared carry.
+
+<DagReplay />
+
+The graph and robot assignments on the right replay the same execution trace as the video. Blue marks an active action, amber marks recovery, and green marks completion. The two approach/grasp lanes are independent; the shared lift waits for both holds. The lower-speed transport branch remains visible even when it is not selected.
+
+This is a controlled service-failure test, not a broken gripper. It demonstrates changing the **composition of available skills** after failure. A separate end-to-end test generated a graph with one Ollama call and completed the co-carry task with recovery; the recording above uses a saved graph to make the failure experiment repeatable.
+
+## The action graph schema
+
+A directed acyclic graph, or DAG, specifies which physical actions can lead to which other actions, without introducing execution cycles. Nodes wrap skills such as `approach`, `grasp`, `lift`, and `transport`. They do not contain arbitrary code or logical “decision actions”: the engine owns the decision logic.
+
+Each node describes itself and its **outgoing edges**. There is no `depends_on` field in this action-graph format. The engine derives incoming relationships to schedule joins; changing how dependencies are stored does not remove the need to wait when two actions must finish before a shared action can begin.
+
+| Field | Meaning |
+| --- | --- |
+| `schema_version` | Selects the graph’s structural and routing rules. This example uses the experimental 2.2 format. |
+| `skill_catalog_version` | Identifies the skill API the graph was written against. |
+| `plan_id` | Identifies this execution plan. |
+| `entry_nodes` | Lists the starting actions; multiple entries allow independent lanes. |
+| `global_state` | Declares typed state slots, with initial values where known. Inputs and returned outputs refer to these slots by name. |
+| Node `id` / `name` | Identifies the action and the trusted skill it invokes. |
+| Node `inputs` / `outputs` | Maps the skill’s declared input and output ports to global-state slots. Robot assignments are resolved through the skill’s participant inputs. |
+| Node `timeout_s` | Bounds the invocation; a timeout is a failure, not evidence that the goal was achieved. |
+| Node `activation` | `any` accepts an arriving route; `all` waits for incoming routes to resolve and all selected arrivals to be ready. Untaken conditional lanes do not block forever. |
+| Node `routing` | `exclusive` requires one matching route; `fork` activates all matching routes. |
+| Node `outbound_edges` | Lists a destination node, or `null` for termination, and a condition evaluated by the engine. |
+
+Conditions are a closed data language: comparisons against declared state, Boolean combinations (`all`, `any`, `not`), `always`, and an `otherwise` fallback. They are not Python or executable expressions. Exclusive routing rejects ambiguous matches instead of silently choosing the first edge. Reaching a terminal edge is also separate from verifying the task outcome.
+
+The co-carry example binds R0 to `end_a` and R1 to `end_b`. Both approach and grasp receive an explicit `grasp_site`. These names identify object-relative grasp candidates, rather than baking a particular world coordinate into the graph. Supporting a different object still requires suitable grasp candidates and capable physical skills.
+
+<details>
+  <summary><strong>View the complete JSON schema</strong></summary>
+  <p>The complete schema includes compatibility rules for earlier experimental versions. The example below uses version 2.2. Additional checks validate skill names, port contracts, graph acyclicity, references, and execution semantics.</p>
+  <Code code={JSON.stringify(schema, null, 2)} lang="json" />
+</details>
+
+<details>
+  <summary><strong>View the complete co-carry action graph used in the recording</strong></summary>
+  <Code code={JSON.stringify(example, null, 2)} lang="json" />
+</details>
+
+[Download the schema](/demos/2026-11-14-dag/action.schema.json) · [Download the co-carry graph](/demos/2026-11-14-dag/plan.json) · [Skill input/output library](/demos/2026-11-14-dag/skill-library.json) · [Skill contracts](/demos/2026-11-14-dag/skill-contracts.json)
+
+## How execution works
+
+The architecture separates three responsibilities:
+
+1. **The LLM proposes the initial graph.** The request is packaged with the observed scene, available skills and their input/output contracts, the JSON schema, and an example. Ollama returns a candidate graph in one call. Validation must pass before any action is dispatched; malformed plans are rejected rather than repaired through repeated prompts.
+2. **The engine coordinates execution.** A central engine resolves inputs, checks contracts, reserves robot resources, starts ready actions, accepts their results, updates state, and evaluates outgoing conditions. A robot receives the relevant skill invocation; it does not independently interpret a duplicate of the whole graph. Independent lanes can proceed concurrently, while shared actions reserve both robots.
+3. **The skills control physical behaviour.** A skill is a replaceable implementation behind a declared API. It handles its own motion and internal recovery, then returns success or a structured failure. The graph engine does not prescribe every control step inside it.
+
+Completion is tied to returned results and observed effects. A predicted effect in a planner is never written into the real state as if it had happened. This simulation uses ground-truth observations, including contact and payload state. Deployment will need corresponding observations from the robot’s sensing system.
+
+The UI exposes this separation: graph generation and validation, robot assignments, active actions, selected edges, returned values, and an execution timeline. Its replay makes the failure history inspectable even after the task eventually succeeds.
+
+## Finding a different strategy after failure
+
+The new planner uses **deterministic, bounded forward breadth-first search over grounded skill contracts**. It constructs a short sequence from available capabilities; there is no authored “grasp failed → run these two steps” recipe.
+
+Each trusted skill contract describes the facts it requires, conditions it must maintain, facts it establishes or invalidates, and resources it needs. A failure result states what failed, whether the engine can safely take control, and whether the exclusion applies to this attempt, these input bindings, or the skill for the recovery episode. Exhausted options are retained so the engine does not repeatedly try a known unavailable route.
+
+The algorithm is:
+
+1. **Define the missing outcome.** Use the failed invocation’s entire declared effect set as the local goal, while protecting established peer effects and trusted invariants.
+2. **Build a finite candidate set.** Bind available skills to typed values from the invocation and any supplied candidate choices. Remove unavailable or exhausted invocations. Retain skills relevant to the goal and its prerequisites.
+3. **Search from current observations.** Expand applicable actions in stable order. Breadth-first search finds the fewest skill invocations within this finite search model. Unknown facts do not satisfy preconditions; predicted effects are only hypothetical search states.
+4. **Compile a continuation DAG.** Execute the selected physical actions in a separate, finite graph. The original graph and its history remain intact. This first continuation compiler produces a sequence; the parent graph retains its parallel lanes, forks, and joins.
+5. **Recheck and reconnect.** Re-observe relevant conditions before dispatch and verify effects after each step. Relevant changes can trigger a bounded restart. Resume the original node’s outgoing routes only after the original outcome is observed and actual returned outputs satisfy its contract. Different skills can substitute outputs only through declared semantic compatibility.
+
+For this test, the missing fact is `holding(r0, payload)`. The contracts show that closing an aligned gripper can establish a hold, and alignment can establish the prerequisite. Search therefore produces:
+
+**`align_gripper` → `close_gripper` → verify the original grasp outcome → resume the shared lift.**
+
+<details>
+  <summary><strong>View the continuation DAG produced by the engine</strong></summary>
+  <Code code={JSON.stringify(continuation, null, 2)} lang="json" />
+</details>
+
+Search has explicit limits: at most four actions, 64 grounded candidates, and 128 expanded states under the default configuration, with bounded attempts and restarts. Work is sliced across scheduler ticks. Physics continues to step between search slices and throughout the recovery actions; independent robot lanes continue to advance.
+
+This bounds how much planning work can accumulate, but it is cooperative scheduling in Python, not a hard real-time guarantee. The shortest action sequence is not necessarily the fastest or safest physical strategy. If no modeled continuation is found within the budget, the engine reports an unresolved outcome rather than claiming success.
+
+## Research basis and design choices
+
+**DART-LLM** motivates the use of explicit DAG dependencies to turn language instructions into coordinated multi-robot tasks. Our outgoing-edge representation, typed contracts, and local recovery engine are additional design choices, rather than a reproduction of its complete pipeline.<Cite id="dart-llm" />
+
+**SkiROS2** provides a useful model for composable skills with preconditions, conditions maintained during execution, and postconditions. We adopt that separation between task-level reasoning and skill-level behaviour while keeping our DAG representation; SkiROS2 itself uses an extended behavior-tree formulation.<Cite id="skiros2" />
+
+**PRP Rebooted / PR2** studies symbolic planning with outcomes that are only known after execution. It reinforces the need to represent unsuccessful outcomes explicitly. Our implementation is a smaller bounded forward search, not PR2, and does not inherit the guarantees of a full nondeterministic policy planner.<Cite id="prp-rebooted" />
+
+The practical synthesis is to use language for the initial proposal, trusted contracts for executable meaning, and observed state for runtime decisions. The DAG remains the execution structure throughout.
+
+## What we verified
+
+| Check | Outcome |
+| --- | --- |
+| Combined grasp service unavailable on R0 | A different skill sequence established the hold; co-carry completed. |
+| Same failure on R1 | Recovery targeted the other robot; co-carry completed. |
+| One-call Ollama generation followed by execution | The generated graph completed with recovery and no second LLM call. |
+| Generic non-co-carry contract test | A battery example composed an alternative sequence, checking that search is not tied to grasp-specific action names. |
+| Existing default experiment | Continued to pass unchanged. |
+
+## Next steps
+
+The current planner reconnects at the failed action’s outcome. It does not yet repair an arbitrary incorrect future subgraph, change the mission goal, or invent a physically feasible path through an obstacle. A wall blocking a carried object would require skills and validated alternatives that actually permit another route, pose, or manipulation strategy.
+
+The next work is to broaden those trusted capabilities and candidate inputs, exercise more failure types, and replace simulated observations with sensor-backed interfaces. Fast disturbances during an active skill remain the responsibility of its controller and internal recovery. The engine’s role begins when that skill returns a failure and control can be handed back safely.

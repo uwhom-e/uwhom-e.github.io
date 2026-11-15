@@ -1,0 +1,88 @@
+{
+  "schema_version": "2.2.0-action-experimental.1",
+  "skill_catalog_version": "cocarry-action/0.1.0",
+  "plan_id": "continuation_grasp_r0_da811ac0_1",
+  "entry_nodes": [
+    "continuation_grasp_r0_da811ac0_1_s0"
+  ],
+  "global_state": {
+    "s0_in_0": {
+      "type": "string",
+      "value": "r0"
+    },
+    "s0_in_1": {
+      "type": "string",
+      "value": "payload"
+    },
+    "s0_in_2": {
+      "type": "string",
+      "value": "end_a"
+    },
+    "s0_out_0": {
+      "type": "object"
+    },
+    "s1_in_0": {
+      "type": "string",
+      "value": "r0"
+    },
+    "s1_in_1": {
+      "type": "string",
+      "value": "payload"
+    },
+    "s1_in_2": {
+      "type": "string",
+      "value": "end_a"
+    },
+    "s1_out_0": {
+      "type": "object"
+    }
+  },
+  "nodes": [
+    {
+      "id": "continuation_grasp_r0_da811ac0_1_s0",
+      "name": "align_gripper",
+      "inputs": {
+        "robot": "s0_in_0",
+        "object_id": "s0_in_1",
+        "grasp_site": "s0_in_2"
+      },
+      "outputs": {
+        "observation": "s0_out_0"
+      },
+      "timeout_s": 12,
+      "activation": "any",
+      "routing": "exclusive",
+      "outbound_edges": [
+        {
+          "to": "continuation_grasp_r0_da811ac0_1_s1",
+          "condition": {
+            "always": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "continuation_grasp_r0_da811ac0_1_s1",
+      "name": "close_gripper",
+      "inputs": {
+        "robot": "s1_in_0",
+        "object_id": "s1_in_1",
+        "grasp_site": "s1_in_2"
+      },
+      "outputs": {
+        "observation": "s1_out_0"
+      },
+      "timeout_s": 12,
+      "activation": "any",
+      "routing": "exclusive",
+      "outbound_edges": [
+        {
+          "to": null,
+          "condition": {
+            "always": true
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+
+.embedded .topbar,.embedded .page-heading,.embedded .pipeline,.embedded .page-footer,
+.embedded .playback,.embedded .inspector,.embedded .side-footer{display:none}
+.embedded main{max-width:none;margin:0;padding:0;height:100vh;display:block}
+.embedded .workspace-grid{display:flex;flex-direction:column;height:100vh;min-height:0;gap:0}
+.embedded .graph-panel{flex:1;min-height:0;border:0;border-radius:0}
+.embedded .canvas,.embedded .activity-view{min-height:0;flex:1;height:auto}
+.embedded .side-panel{flex:none;overflow:visible;border:0;border-top:1px solid var(--line);border-radius:0}
+.embedded .fleet-section{padding:12px 16px;border:0}
+.embedded .section-title{margin-bottom:10px}
+.embedded .robots{flex-direction:row;gap:18px}
+.embedded .robot-row{flex:1;min-width:0}
+.embedded .robot-top{flex-wrap:wrap;gap:6px}
+.embedded .robot-top .status-pill{margin-left:0}
+.embedded .robot-avatar{display:none}
+.embedded .fleet-caption{display:none}
+.embedded .task-segments{margin:8px 0 0}
+.embedded .canvas-top{top:8px}.embedded .canvas-bottom{bottom:8px}
+.embedded .legend{gap:8px}.embedded .panel-toolbar{height:42px}
+.embedded .robot-task{min-height:24px}
+@media(max-width:450px){
+  .embedded .node .node-label{font-size:18px}
+  .embedded .node .node-subtitle{font-size:13px}
+  .embedded .node .node-status{font-size:17px}
+  .embedded .node.terminal .node-label{font-size:15px}
+}
