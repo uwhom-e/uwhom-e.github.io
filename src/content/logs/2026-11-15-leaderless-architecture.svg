@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" role="img" aria-label="Leaderless co-transport: every robot runs the same two-layer stack">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="560" rx="14" fill="#ffffff"/>
+  <text x="24" y="36" font-size="16" font-weight="600" fill="#0f172a">Every robot runs the same stack; only messages and the object connect them</text>
+
+  <rect x="24" y="56" width="500" height="480" rx="10" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="40" y="80" font-weight="600" fill="#0f172a">Robot i (identical on every robot)</text>
+
+  <g fill="none" stroke="#64748b" stroke-width="1.3">
+    <path d="M354 148V168" marker-end="url(#a)"/>
+    <path d="M354 224V244" marker-end="url(#a)"/>
+    <path d="M354 316V336" marker-end="url(#a)"/>
+    <path d="M354 392V412" marker-end="url(#a)"/>
+    <path d="M354 468V484" marker-end="url(#a)"/>
+    <path d="M172 280H200" marker-end="url(#a)"/>
+    <path d="M172 440H200" marker-end="url(#a)"/>
+    <path d="M508 280H552" marker-start="url(#a)" marker-end="url(#a)"/>
+    <path d="M508 440H552" marker-start="url(#a)" marker-end="url(#a)"/>
+  </g>
+  <text x="530" y="270" text-anchor="middle" font-size="11.5" fill="#64748b">plans</text>
+  <text x="530" y="430" text-anchor="middle" font-size="11.5" fill="#64748b">force</text>
+
+  <rect x="200" y="96" width="308" height="52" rx="8" fill="none" stroke="#64748b"/>
+  <text x="214" y="118" font-weight="600" fill="#0f172a">co_transport skill</text>
+  <text x="214" y="136" font-size="11.5" fill="#475569">from the action graph: goal, grasp points</text>
+
+  <rect x="200" y="168" width="308" height="56" rx="8" fill="none" stroke="#64748b"/>
+  <text x="214" y="190" font-weight="600" fill="#0f172a">Shared path planner</text>
+  <text x="214" y="208" font-size="11.5" fill="#475569">A* on shared map; same result on every robot</text>
+
+  <rect x="200" y="244" width="308" height="72" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+  <text x="214" y="266" font-weight="600" fill="#0f172a">ADMM-MPC planner, 10 Hz</text>
+  <text x="214" y="284" font-size="11.5" fill="#0f172a">Local QP over the object's next 2 s</text>
+  <text x="214" y="300" font-size="11.5" fill="#0f172a">3 consensus rounds with teammates</text>
+
+  <rect x="200" y="336" width="308" height="56" rx="8" fill="none" stroke="#64748b"/>
+  <text x="214" y="358" font-weight="600" fill="#0f172a">Safety check</text>
+  <text x="214" y="376" font-size="11.5" fill="#475569">team takes the most cautious step</text>
+
+  <rect x="200" y="412" width="308" height="56" rx="8" fill="none" stroke="#64748b"/>
+  <text x="214" y="434" font-weight="600" fill="#0f172a">Admittance loop, 100 Hz</text>
+  <text x="214" y="452" font-size="11.5" fill="#475569">tracks the plan, yields to felt force</text>
+
+  <rect x="200" y="484" width="308" height="40" rx="8" fill="none" stroke="#64748b"/>
+  <text x="214" y="509" font-weight="600" fill="#0f172a">Wheel velocity loops</text>
+
+  <rect x="40" y="244" width="132" height="72" rx="8" fill="none" stroke="#64748b"/>
+  <text x="52" y="266" font-weight="600" fill="#0f172a">2D lidar, ToF</text>
+  <text x="52" y="284" font-size="11.5" fill="#475569">localization and</text>
+  <text x="52" y="300" font-size="11.5" fill="#475569">obstacle tracks</text>
+
+  <rect x="40" y="412" width="132" height="56" rx="8" fill="none" stroke="#64748b"/>
+  <text x="52" y="434" font-weight="600" fill="#0f172a">Grip force</text>
+  <text x="52" y="452" font-size="11.5" fill="#475569">or wrist spring</text>
+
+  <rect x="552" y="244" width="184" height="72" rx="8" fill="none" stroke="#64748b"/>
+  <text x="566" y="266" font-weight="600" fill="#0f172a">Teammates</text>
+  <text x="566" y="284" font-size="11.5" fill="#475569">same stack, no leader</text>
+  <text x="566" y="300" font-size="11.5" fill="#475569">~270 B per round over UDP</text>
+
+  <rect x="552" y="412" width="184" height="56" rx="8" fill="none" stroke="#64748b"/>
+  <text x="566" y="434" font-weight="600" fill="#0f172a">The object</text>
+  <text x="566" y="452" font-size="11.5" fill="#475569">rigid, couples the grippers</text>
+</svg>
